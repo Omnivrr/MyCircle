@@ -20,4 +20,6 @@ struct User: Identifiable, Codable {
     let registered: Date // The date when the user registered
     let tags: [String] // An array of tags associated with the user
     let friends: [Friend] // An array of Friend objects representing the user's friends
+    
+    static let example = User(id: UUID(), isActive: true, name: "Bukhari", age: 24, company: "Omnivrr", email: "Omnivrr@gmail.com", address: "No 50D SMC Quaters, U/Dosa", about: "Bukhari is a junior software developer, learning iOS development", registered: .now, tags: ["Swfit", "SwiftUI", "Cats"], friends: [])
 }
