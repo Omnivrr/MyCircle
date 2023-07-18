@@ -28,7 +28,7 @@ extension CachedUser {
     @NSManaged public var tags: String?
     @NSManaged public var friends: NSSet?
     
-    var wrappedname: String {
+    var wrappedName: String {
         name ?? ""
     }
     

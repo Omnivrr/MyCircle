@@ -8,7 +8,9 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var users = [User]() // State property holding an array of User objects
+    @Environment(\.managedObjectContext) var moc
+    @FetchRequest(sortDescriptors: [SortDescriptor(\.name)]) var users: FetchedResults<CachedUser>
+    
     
     var body: some View {
         NavigationView {
@@ -21,37 +23,61 @@ struct ContentView: View {
                             .fill(user.isActive ? .green : .red)
                             .frame(width: 30)
                         
-                        Text(user.name)
+                        Text(user.wrappedName)
                     }
                 }
             }
-            .navigationTitle("My Circle") // Sets the navigation bar title
-            
-            // Executes the fetchUsers() method when the view appears
+            .navigationTitle("My Circle")
             .task {
                 await fetchUsers()
             }
         }
     }
     
-    // Asynchronous method to fetch users from a remote JSON API
+    
     func fetchUsers() async {
-        guard users.isEmpty else { return } // Check if the users array is empty
-        
+        guard users.isEmpty else { return }
         do {
-            let url = URL(string: "https://www.hackingwithswift.com/samples/friendface.json")! // Create a URL object
-            
-            // Fetches data from the specified URL asynchronously
+            let url = URL(string: "https://www.hackingwithswift.com/samples/friendface.json")!
             let (data, _) = try await URLSession.shared.data(from: url)
             
-            let decoder = JSONDecoder() // Create a JSONDecoder object
-            decoder.dateDecodingStrategy = .iso8601 // Set the date decoding strategy
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+           
+          let users = try decoder.decode([User].self, from: data)
             
-            // Decode the fetched data into an array of User objects
-            users = try decoder.decode([User].self, from: data)
+            await MainActor.run {
+                updateCache(with: users)
+            }
         } catch {
-            print("Download failed") // Print an error message if downloading or decoding fails
+            print("Download failed") 
         }
+    }
+    func updateCache(with downloadedUsers: [User]) {
+        for user in downloadedUsers {
+            let cachedUser = CachedUser(context: moc)
+            
+            cachedUser.id = user.id
+            cachedUser.isActive = user.isActive
+            cachedUser.name = user.name
+            cachedUser.age = Int16(user.age)
+            cachedUser.company = user.company
+            cachedUser.email = user.email
+            cachedUser.address = user.address
+            cachedUser.about = user.about
+            cachedUser.registered = user.registered
+            cachedUser.tags = user.tags.joined(separator:",")
+            
+            for friend in user.friends {
+                let cachedFriend = CachedFriend(context: moc)
+                cachedFriend.id = friend.id
+                cachedFriend.name = friend.name
+                
+                cachedUser.addToFriends(cachedFriend)
+            }
+           
+        }
+        try? moc.save()
     }
 }
 
